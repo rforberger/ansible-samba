@@ -1,0 +1,15 @@
+#!/usr/bin/env bash
+
+if [[ -f "/var/lib/samba/private/sam.ldb" ]]; then exit; fi
+
+#if [[ "{{ 'true' if('br0' in ansible_interfaces) }}" == "true" ]]; then
+#  set host-ip="{{ ansible_br0.ipv4.address if('br0' in ansible_interfaces) }}"
+#elif [[ "{{ 'true' if('wg0' in ansible_interfaces) }}" == "true" ]]; then
+#  set host-ip="{{ ansible_wg0.ipv4.address if('wg0' in ansible_interfaces) }}"
+#else
+#  set host-ip="{{ ansible_default_ipv4.address }}"
+#fi
+
+samba-tool domain provision --option="interfaces=lo{{ wireguard.ips.internal + '/' + wireguard.ips.subnet_prefix if('wg0' in ansible_interfaces) }}{{ ' 192.168.111.2/24' if('wgclient0' in ansible_interfaces) }}" --option="bind interfaces only=yes" --server-role=dc --use-rfc2307 --dns-backend=SAMBA_INTERNAL --realm={{ samba.realm }} --domain={{ samba.domain }} --adminpass="{{ samba.Administrator_password }}"  > /var/log/samba-provision.log 2>&1
+
+

@@ -1,0 +1,78 @@
+---
+
+- name: install pkgs
+  ansible.builtin.apt:
+    name: "{{ packages }}"
+    state: present
+  vars:
+    packages:
+      - samba
+      - winbind
+
+- name: stat samba ldb database
+  ansible.builtin.stat:
+    path: "/var/lib/samba/private/sam.ldb"
+  register: sam
+
+- name: remove debian configured files
+  ansible.builtin.file:
+    dest: "{{ item }}"
+    state: absent
+  loop:
+    - "/etc/krb5.conf"
+    - "/etc/samba/smb.conf"
+  when: not sam.stat.exists
+
+- name: Write samba scripts
+  ansible.builtin.template:
+    src: "{{ item.src }}"
+    dest: "{{ item.dest }}"
+    mode: 0700
+  loop:
+    - { src: "provision.sh.j2", dest: "/usr/local/sbin/samba-provision.sh" }
+    - { src: "join.sh.j2", dest: "/usr/local/sbin/samba-join.sh" }
+
+- name: disable standalone smbd
+  ansible.builtin.systemd:
+    name: "smbd"
+    enabled: no
+    state: stopped
+
+- name: Enable AD DC smbd
+  ansible.builtin.systemd:
+    name: "samba-ad-dc"
+    enabled: yes
+    state: stopped
+    masked: false
+
+- name: Provision samba DC
+  ansible.builtin.shell:
+    cmd: "/usr/local/sbin/samba-provision.sh"
+  notify:
+    - samba
+  when: samba_pdc is true and not sam.stat.exists
+
+- name: Join samba DC
+  ansible.builtin.shell:
+    cmd: "/usr/local/sbin/samba-join.sh"
+  notify:
+    - samba
+  when: not samba_pdc is true and not sam.stat.exists
+
+- name: Start AD DC smbd
+  ansible.builtin.systemd:
+    name: "samba-ad-dc"
+    state: started
+
+- name: Copy krb5.conf from samba to system
+  ansible.builtin.copy:
+    src: "/var/lib/samba/private/krb5.conf"
+    dest: "/etc/krb5.conf"
+    remote_src: true
+
+
+
+
+
+
+

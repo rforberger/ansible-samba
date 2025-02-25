@@ -1,0 +1,9 @@
+---
+
+- name: samba
+  ansible.builtin.service:
+    name: samba-ad-dc
+    state: restarted
+
+
+

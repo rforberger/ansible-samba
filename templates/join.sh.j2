@@ -1,0 +1,7 @@
+#!/usr/bin/env bash
+
+if [[ -f "/var/lib/samba/private/sam.ldb" ]]; then exit; fi
+
+samba-tool domain join {{ samba.realm }} DC --option="dns forwarder=192.168.111.1" --server=192.168.111.1 --option='idmap_ldb:use rfc2307 = yes' --dns-backend=SAMBA_INTERNAL -U"{{ samba.domain }}\Administrator" --password="{{ samba.Administrator_password }}"  > /var/log/samba-join.log 2>&1
+#--option="interfaces=lo{{ ' br0' if('br0' in ansible_interfaces) }}{{ ' ' + wireguard.ips.internal + '/' + wireguard.ips.subnet_prefix if('wg0' in ansible_interfaces) }}{{ ' ' + ansible_wgclient0.ipv4.address + '/32' if('wgclient0' in ansible_interfaces) }}" --option="bind interfaces only=yes"
+
